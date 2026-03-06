@@ -1,1 +1,1 @@
-select * from raw.reed_jobs
+SELECT * from staging.jobs

@@ -11,6 +11,12 @@ SELECT DISTINCT ON (job_data->>'jobId')
     (job_data->>'expirationDate')::DATE AS expiration_date,
     job_data->>'jobUrl' AS job_url
 FROM raw.reed_jobs
-ORDER BY job_data->>'jobId', ingested_at DESC;
+ORDER BY job_data->>'jobId', ingested_at DESC
+ON CONFLICT (job_id) DO NOTHING;
 
+-- Insert skills into staging.skills
 
+-- COPY staging.skills(skill_id, skill_name)
+-- FROM '/DevDrive/git/job-market-data-pipeline/sql/staging/skills_data/skills.csv'
+-- DELIMITER ','
+-- CSV HEADER;
