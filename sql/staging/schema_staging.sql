@@ -32,4 +32,8 @@ CREATE TABLE staging.job_skills (
     PRIMARY KEY (job_id, skill_id)
 );
 
+ALTER TABLE staging.job_skills
+ADD CONSTRAINT job_skills_unique
+UNIQUE (job_id, skill_id);
+
 
