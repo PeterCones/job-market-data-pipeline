@@ -13,3 +13,4 @@ SELECT DISTINCT ON (job_data->>'jobId')
 FROM raw.reed_jobs
 ORDER BY job_data->>'jobId', ingested_at DESC;
 
+
