@@ -35,14 +35,17 @@ except Exception as e:
 keywords = [
     "data engineer",
     "data analyst",
-    "machine learning",
+    "junior software",
     "python",
+    "software apprentice",
     "sql",
     "analytics engineer",
 ]
 
 results_per_page = 100
-
+agg_total = 0
+inserted = 0
+skipped = 0
 for keyword in keywords:
     print(f"\n--- Searching for: {keyword} ---")
 
@@ -65,6 +68,7 @@ for keyword in keywords:
     total_results = data["totalResults"]
     total_pages = math.ceil(total_results / results_per_page)
 
+
     print(f"Total results: {total_results}")
     print(f"Total pages: {total_pages}")
 
@@ -86,13 +90,12 @@ for keyword in keywords:
 
         data = response.json()
         jobs = data.get("results", [])
+         
 
         print(f"Ingesting page {page} with {len(jobs)} jobs")
 
         for job in jobs:
-
             job_id = job["jobId"]
-
             cur.execute(
                 """
                 INSERT INTO raw.reed_jobs (job_id, source, job_data)
@@ -101,6 +104,12 @@ for keyword in keywords:
                 """,
                 (job_id, "reed", json.dumps(job)),
             )
+            if cur.rowcount == 1:
+                inserted += 1
+            else:
+                skipped += 1
+
+        print(f"Page {page}: {inserted} inserted, {skipped} skipped (duplicates)")
         conn.commit()
         time.sleep(0.3)
 
