@@ -16,6 +16,10 @@
 -- GROUP BY s.skill_name
 -- ORDER BY match_count DESC;
 
+select * from staging.jobs 
+where lower(title) not like '%senior%'
+order by expiration_date
+
 
 
 select * from staging.jobs
