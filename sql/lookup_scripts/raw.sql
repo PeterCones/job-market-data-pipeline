@@ -1,5 +1,0 @@
-select * from raw.reed_jobs
-
-
-
-
