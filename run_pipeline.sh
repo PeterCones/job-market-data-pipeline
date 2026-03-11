@@ -12,12 +12,9 @@ source /DevDrive/git/job-market-data-pipeline/.venv/bin/activate
 # run ingestion
 python /DevDrive/git/job-market-data-pipeline/ingestion/reed_ingest.py
 
-# run SQL transforms
+# run dbt transforms
 
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /DevDrive/git/job-market-data-pipeline/sql/staging/transform_from_raw.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /DevDrive/git/job-market-data-pipeline/sql/staging/populate_job_skills.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /DevDrive/git/job-market-data-pipeline/sql/analytics/populate_skills_demand.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /DevDrive/git/job-market-data-pipeline/sql/analytics/populate_jobs_per_day.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /DevDrive/git/job-market-data-pipeline/sql/analytics/populate_salary_by_location.sql
+cd /DevDrive/git/job-market-data-pipeline/transforms
+dbt run && dbt test >> /DevDrive/git/job-market-data-pipeline/transforms/logs/dbt_run.log 2>&1
 
 echo "Pipeline complete."
