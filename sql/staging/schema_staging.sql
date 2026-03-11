@@ -37,3 +37,4 @@ ADD CONSTRAINT job_skills_unique
 UNIQUE (job_id, skill_id);
 
 
+
