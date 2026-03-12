@@ -1,3 +1,6 @@
 .venv/
 .env
-.logs
+logs/
+pipeline.log
+target/
+dbt_packages/
