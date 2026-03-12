@@ -1,6 +1,8 @@
 # 📊 Job Market Data Pipeline
 
-An end-to-end data pipeline that ingests live job listings from the [Reed API](https://www.reed.co.uk/developers/jobseeker), transforms them across a layered PostgreSQL schema, and surfaces analytics on skill demand, salary benchmarking, and posting trends — refreshed automatically on a cron schedule.
+An end-to-end data pipeline that ingests live job listings from the [Reed API](https://www.reed.co.uk/developers/jobseeker), transforms them through a layered PostgreSQL schema using dbt, and surfaces analytics on skill demand, salary benchmarking, and posting trends — refreshed automatically on a cron schedule.
+
+> This project was initially built with raw SQL scripts and subsequently refactored using dbt to introduce automated testing, data lineage tracking, and a scalable transformation layer.
 
 ---
 
@@ -26,24 +28,25 @@ An end-to-end data pipeline that ingests live job listings from the [Reed API](h
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     STAGING LAYER                               │
+│                     TRANSFORMATION LAYER  (dbt)                 │
 │                                                                 │
-│   raw.reed_jobs  ──►  staging.jobs                              │
-│                  ──►  staging.skills  (normalised)              │
-│                  ──►  staging.job_skills  (junction table)      │
+│   raw.reed_jobs  ──►  stg_jobs          (cleaned, typed)        │
+│                  ──►  stg_job_skills    (skill matching)        │
+│                  ──►  skills            (seed reference data)   │
 │                                                                 │
-│   • Extracts & types fields from raw JSON                       │
+│   • Extracts & casts fields from raw JSON                       │
 │   • Deduplicates keeping latest ingested record                 │
-│   • Normalises skills into relational model                     │
+│   • Matches skills to jobs via CROSS JOIN pattern               │
+│   • Full lineage tracked via dbt ref() dependencies            │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     ANALYTICS LAYER                             │
+│                     ANALYTICS LAYER  (dbt)                      │
 │                                                                 │
 │   staging.*  ──►  analytics.skill_demand                        │
-│             ──►  analytics.salary_by_location                   │
-│             ──►  analytics.jobs_per_day                         │
+│              ──►  analytics.salary_by_location                  │
+│              ──►  analytics.jobs_per_day                        │
 │                                                                 │
 │   • Aggregated, query-ready mart tables                         │
 │   • Rebuilt on each pipeline run                                │
@@ -58,7 +61,8 @@ An end-to-end data pipeline that ingests live job listings from the [Reed API](h
 |---|---|
 | Ingestion | Python, `requests`, `psycopg2` |
 | Database | PostgreSQL |
-| Transformation | SQL (raw → staging → analytics) |
+| Transformation | dbt (staging + analytics models, seed data) |
+| Testing | dbt tests (`not_null`, `unique`, `accepted_values`) |
 | Orchestration | Bash + cron |
 | Config | `.env` via `python-dotenv` |
 
@@ -70,37 +74,40 @@ An end-to-end data pipeline that ingests live job listings from the [Reed API](h
 job-market-data-pipeline/
 │
 ├── ingestion/
-│   └── reed_ingest.py              # API ingestion script
+│   └── reed_ingest.py              # Reed API ingestion script
+│
+├── transforms/                     # dbt project
+│   ├── models/
+│   │   ├── staging/
+│   │   │   ├── stg_jobs.sql        # Cleans & casts raw JSON fields
+│   │   │   └── stg_job_skills.sql  # Matches skills to jobs
+│   │   └── analytics/
+│   │       ├── skill_demand.sql
+│   │       ├── salary_by_location.sql
+│   │       └── jobs_per_day.sql
+│   ├── seeds/
+│   │   └── skills.csv              # Reference list of 60 tracked skills
+│   ├── tests/                      # Custom dbt tests
+│   └── dbt_project.yml
+│
+├── legacy_sql/                     # Original SQL scripts (pre-dbt refactor)
+│   ├── transform_from_raw.sql
+│   ├── populate_job_skills.sql
+│   ├── populate_skills_demand.sql
+│   ├── populate_salary_by_location.sql
+│   ├── populate_jobs_per_day.sql
+│   └── insert_skills.sql
 │
 ├── sql/
-│   ├── setup.sql                   # Creates raw, staging, and analytics schemas
-│   │
-│   ├── raw/
-│   │   └── schema_raw.sql
-│   │
-│   ├── staging/
-│   │   ├── schema_staging.sql
-│   │   ├── transform_from_raw.sql
-│   │   ├── populate_job_skills.sql
-│   │   └── skills_data/
-│   │       ├── insert_skills.sql
-│   │       └── skills.csv
-│   │
-│   ├── analytics/
-│   │   ├── schema_analytics.sql
-│   │   ├── populate_skills_demand.sql
-│   │   ├── populate_salary_by_location.sql
-│   │   └── populate_jobs_per_day.sql
-│   │
-│   └── lookup_scripts/             # Ad-hoc query scripts for inspection/maintenance
-│       ├── raw.sql
-│       ├── staging.sql
-│       ├── analytics.sql
-│       └── clean_db.sql
+│   ├── setup.sql                   # Creates raw, staging, analytics schemas
+│   ├── raw/schema_raw.sql
+│   ├── staging/schema_staging.sql
+│   ├── analytics/schema_analytics.sql
+│   └── lookup_scripts/             # Ad-hoc inspection & maintenance queries
 │
 ├── run_pipeline.sh                 # Orchestration script (cron scheduled)
 ├── requirements.txt
-├── .env.example                    # Environment variable template
+├── .env.example
 └── README.md
 ```
 
@@ -136,33 +143,65 @@ cp .env.example .env
 ### Database Setup
 
 ```bash
-# Create schemas, tables, and seed reference data
+# Create schemas and tables
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/setup.sql
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/raw/schema_raw.sql
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/staging/schema_staging.sql
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/analytics/schema_analytics.sql
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/staging/skills_data/insert_skills.sql
 ```
 
-### Running the Pipeline
+### dbt Setup
+
+```bash
+cd transforms
+
+# Seed reference data (skills list)
+dbt seed
+
+# Run all models
+dbt run
+
+# Run tests
+dbt test
+
+# View documentation
+dbt docs generate && dbt docs serve
+```
+
+### Running the Full Pipeline
 
 ```bash
 # Run manually
 bash run_pipeline.sh
 
 # Or schedule with cron (example: run daily at 6am)
-0 6 * * * /bin/bash /path/to/run_pipeline.sh >> /var/log/job-pipeline.log 2>&1
+0 6 * * * /bin/bash /path/to/run_pipeline.sh
 ```
 
 ---
 
-## Analytics Outputs
+## dbt Models
 
-| Table | Description |
+### Staging
+
+| Model | Description |
 |---|---|
-| `analytics.skill_demand` | Ranked count of skills mentioned across all job listings |
-| `analytics.salary_by_location` | Average advertised salary by location |
-| `analytics.jobs_per_day` | Volume of job postings by date |
+| `stg_jobs` | Extracts and casts fields from raw JSON in `raw.reed_jobs`. Deduplicates on `job_id`, keeping the most recently ingested record. |
+| `stg_job_skills` | Matches jobs to skills via a `CROSS JOIN` against the skills seed, filtering on keyword presence in title and description. |
+
+### Analytics
+
+| Model | Description |
+|---|---|
+| `skill_demand` | Ranked count of skills mentioned across all job listings |
+| `salary_by_location` | Average advertised salary grouped by location |
+| `jobs_per_day` | Volume of job postings by date |
+
+### Seeds
+
+| Seed | Description |
+|---|---|
+| `skills` | Reference list of 60 tracked skills including languages, tools, platforms, and concepts |
 
 ---
 
@@ -175,17 +214,34 @@ software apprentice · sql · analytics engineer
 
 ---
 
+## Skills Tracked (sample)
+
+```
+python · sql · dbt · airflow · spark · kafka · docker · kubernetes ·
+aws · azure · gcp · snowflake · databricks · bigquery · tableau ·
+power bi · tensorflow · pytorch · pandas · scikit-learn · ...
+```
+
+60 skills tracked in total — see [`transforms/seeds/skills.csv`](transforms/seeds/skills.csv) for the full list.
+
+---
+
+## Legacy SQL
+
+The `legacy_sql/` directory contains the original SQL scripts written before the dbt refactor. These are retained for reference to illustrate the evolution of the project from manual SQL orchestration to a fully managed dbt transformation layer.
+
+---
+
 ## Future Improvements
 
-- [ ] Add dbt for transformation layer with full lineage tracking
-- [ ] Replace TRUNCATE/INSERT pattern with transactional swaps
 - [ ] Add retry logic with exponential backoff to ingestion
+- [ ] Containerise with Docker Compose for portability
 - [ ] Extend to additional job boards (LinkedIn, Indeed)
 - [ ] Build a dashboard layer (Metabase / Grafana)
-- [ ] Containerise with Docker Compose for portability
+- [ ] Add dbt sources with freshness checks on `raw.reed_jobs`
 
 ---
 
 ## Author
 
-**Oliver Lacey** — [LinkedIn](https://linkedin.com) · [GitHub](https://github.com/PeterCones)
+**Oliver Lacey** - [LinkedIn](https://www.linkedin.com/in/oliver-l-6175951aa) · [GitHub](https://github.com/PeterCones)
