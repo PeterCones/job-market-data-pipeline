@@ -1,0 +1,40 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: job_market_db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - ":5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pipeline:
+    build: .
+    container_name: job_market_pipeline
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      REED_API_KEY: ${REED_API_KEY}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: postgres        
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pipeline_logs:/var/log
+    restart: unless-stopped
+
+volumes:
+  postgres_data:    # persists across container restarts
+  pipeline_logs:    # persists logs across container restarts

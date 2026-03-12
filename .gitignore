@@ -1,6 +1,25 @@
-.venv/
+# Environment & secrets
 .env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# dbt
+transforms/target/
+transforms/dbt_packages/
+transforms/logs/
+
+# Logs
 logs/
 pipeline.log
-target/
-dbt_packages/
+*.log
+
+# Docker
+docker/profiles.yml
+
+# OS
+.DS_Store
+Thumbs.db

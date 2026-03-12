@@ -7,7 +7,7 @@ SELECT
     NULLIF(job_data ->> 'minimumSalary', '') :: float AS salary_min,
     NULLIF(job_data ->> 'maximumSalary', '') :: float AS salary_max,
     job_data ->> 'jobDescription' AS description,
-    (job_data ->> 'date') :: DATE AS posted_date,
+    to_date(job_data ->> 'date', 'DD/MM/YYYY') AS posted_date,
     job_data ->> 'jobUrl' AS job_url,
     source
 FROM
