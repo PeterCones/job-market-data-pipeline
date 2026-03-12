@@ -1,61 +1,61 @@
-skill_name
-python
-sql
-r
-scala
-java
-javascript
-typescript
-go
-matlab
-sas
-excel
-power bi
-tableau
-looker
-qlik
-postgresql
-mysql
-sql server
-oracle
-mongodb
-redis
-aws
-azure
-gcp
-snowflake
-databricks
-bigquery
-redshift
-spark
-hadoop
-kafka
-airflow
-dbt
-luigi
-prefect
-pandas
-numpy
-scikit-learn
-tensorflow
-pytorch
-xgboost
-git
-github
-gitlab
-docker
-kubernetes
-linux
-bash
-terraform
-ansible
-etl
-elt
-data warehousing
-data modeling
-dimensional modeling
-statistics
-deep learning
-machine learning
-natural language processing
-data visualization
+skill_id,skill_name
+1,python
+2,sql
+3,r
+4,scala
+5,java
+6,javascript
+7,typescript
+8,go
+9,matlab
+10,sas
+11,excel
+12,power bi
+13,tableau
+14,looker
+15,qlik
+16,postgresql
+17,mysql
+18,sql server
+19,oracle
+20,mongodb
+21,redis
+22,aws
+23,azure
+24,gcp
+25,snowflake
+26,databricks
+27,bigquery
+28,redshift
+29,spark
+30,hadoop
+31,kafka
+32,airflow
+33,dbt
+34,luigi
+35,prefect
+36,pandas
+37,numpy
+38,scikit-learn
+39,tensorflow
+40,pytorch
+41,xgboost
+42,git
+43,github
+44,gitlab
+45,docker
+46,kubernetes
+47,linux
+48,bash
+49,terraform
+50,ansible
+51,etl
+52,elt
+53,data warehousing
+54,data modeling
+55,dimensional modeling
+56,statistics
+57,deep learning
+58,machine learning
+59,natural language processing
+60,data visualization
