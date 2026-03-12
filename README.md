@@ -37,7 +37,7 @@ An end-to-end data pipeline that ingests live job listings from the [Reed API](h
 │   • Extracts & casts fields from raw JSON                       │
 │   • Deduplicates keeping latest ingested record                 │
 │   • Matches skills to jobs via CROSS JOIN pattern               │
-│   • Full lineage tracked via dbt ref() dependencies            │
+│   • Full lineage tracked via dbt ref() dependencies             │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
