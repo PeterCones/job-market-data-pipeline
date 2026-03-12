@@ -64,6 +64,7 @@ An end-to-end data pipeline that ingests live job listings from the [Reed API](h
 | Transformation | dbt (staging + analytics models, seed data) |
 | Testing | dbt tests (`not_null`, `unique`, `accepted_values`) |
 | Orchestration | Bash + cron |
+| Containerisation | Docker, Docker Compose |
 | Config | `.env` via `python-dotenv` |
 
 ---
@@ -105,6 +106,12 @@ job-market-data-pipeline/
 │   ├── analytics/schema_analytics.sql
 │   └── lookup_scripts/             # Ad-hoc inspection & maintenance queries
 │
+├── docker/
+│   └── profiles.yml                # dbt profile for Docker environment
+│
+├── Dockerfile                      # Pipeline container image
+├── docker-compose.yml              # Orchestrates postgres + pipeline containers
+├── entrypoint.sh                   # Container startup script
 ├── run_pipeline.sh                 # Orchestration script (cron scheduled)
 ├── requirements.txt
 ├── .env.example
@@ -117,11 +124,38 @@ job-market-data-pipeline/
 
 ### Prerequisites
 
+- A [Reed API key](https://www.reed.co.uk/developers/jobseeker)
+- Docker & Docker Compose
+
+### Quick Start (Docker — recommended)
+
+```bash
+# Clone the repo
+git clone https://github.com/PeterCones/job-market-data-pipeline.git
+cd job-market-data-pipeline
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your Reed API key and DB credentials
+
+# Build and run
+docker compose up --build
+```
+
+That's it. Docker will:
+1. Start a PostgreSQL container with a persistent volume
+2. Wait for the database to be healthy
+3. Create schemas and seed the skills reference data
+4. Run the pipeline immediately on startup
+5. Schedule daily runs at 6am via cron
+
+### Manual Setup (without Docker)
+
+#### Prerequisites
 - Python 3.10+
 - PostgreSQL
-- A [Reed API key](https://www.reed.co.uk/developers/jobseeker)
 
-### Installation
+#### Installation
 
 ```bash
 # Clone the repo
@@ -140,7 +174,7 @@ cp .env.example .env
 # Edit .env with your Reed API key and DB credentials
 ```
 
-### Database Setup
+#### Database Setup
 
 ```bash
 # Create schemas and tables
@@ -150,7 +184,7 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/staging/schema_staging.sql
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f sql/analytics/schema_analytics.sql
 ```
 
-### dbt Setup
+#### dbt Setup
 
 ```bash
 cd transforms
@@ -168,7 +202,7 @@ dbt test
 dbt docs generate && dbt docs serve
 ```
 
-### Running the Full Pipeline
+#### Running the Pipeline
 
 ```bash
 # Run manually
@@ -235,7 +269,6 @@ The `legacy_sql/` directory contains the original SQL scripts written before the
 ## Future Improvements
 
 - [ ] Add retry logic with exponential backoff to ingestion
-- [ ] Containerise with Docker Compose for portability
 - [ ] Extend to additional job boards (LinkedIn, Indeed)
 - [ ] Build a dashboard layer (Metabase / Grafana)
 - [ ] Add dbt sources with freshness checks on `raw.reed_jobs`
